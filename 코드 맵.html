@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>코드 길찾기 게임</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            text-align: center;
+            padding: 30px 10px;
+        }
+        h1 { color: #2c3e50; margin-bottom: 10px; font-size: 28px; }
+        .description { margin-bottom: 20px; color: #555; line-height: 1.6; font-size: 15px; }
+        
+        .key-selector {
+            margin-bottom: 30px;
+            padding: 12px;
+            background-color: #fff;
+            border-radius: 10px;
+            display: inline-block;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 2px solid #bdc3c7;
+        }
+        .key-selector label {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 0 10px;
+            cursor: pointer;
+            color: #2c3e50;
+        }
+        .key-selector input[type="radio"] {
+            transform: scale(1.2);
+            margin-right: 5px;
+            cursor: pointer;
+        }
+
+        /* 가로 스크롤을 없애고 화면에 맞춰 배열하는 Grid 시스템 적용 */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding-bottom: 10px;
+        }
+        
+        .measure {
+            background: white;
+            border: 3px solid #34495e;
+            border-radius: 12px;
+            height: 140px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 3px 3px 10px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        
+        .measure.playing {
+            transform: scale(1.05);
+            border-color: #27ae60;
+            background-color: #e8f8f5;
+            box-shadow: 0 0 15px rgba(39, 174, 96, 0.5);
+            z-index: 10;
+        }
+
+        .measure-num {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .fixed-chord {
+            font-size: 28px;
+            font-weight: bold;
+            color: #e74c3c;
+            cursor: pointer;
+        }
+        
+        .chord-notes {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 8px;
+            font-weight: bold;
+            min-height: 18px;
+        }
+
+        .fixed-box.major-key { background-color: #ffeaa7; border-color: #f39c12; }
+        .fixed-box.major-key:hover { background-color: #fad390; }
+        
+        .fixed-box.minor-key { background-color: #d2b4de; border-color: #8e44ad; }
+        .fixed-box.minor-key:hover { background-color: #c39bd3; }
+        .fixed-box.minor-key .fixed-chord { color: #4a235a; }
+        .fixed-box.minor-key .chord-notes { color: #5b2c6f; }
+
+        select {
+            font-size: 15px;
+            font-weight: bold;
+            padding: 4px 0;
+            width: 85%;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            text-align: center;
+            cursor: pointer;
+            background-color: #fff;
+        }
+        select:disabled { background-color: #ecf0f1; cursor: not-allowed; }
+        
+        .btn-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            transition: background-color 0.2s;
+        }
+        .play-btn { background-color: #27ae60; }
+        .play-btn:hover { background-color: #2ecc71; }
+        .play-btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        
+        .reset-btn { background-color: #3498db; }
+        .reset-btn:hover { background-color: #2980b9; }
+
+        .result-container {
+            display: none;
+            margin-top: 30px;
+            padding: 20px 10px;
+            background-color: #fdfefe;
+            border: 3px dashed #27ae60;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .result-container h2 {
+            color: #27ae60;
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 22px;
+        }
+        
+        /* 결과창도 화면 크기에 맞게 Grid 배열 */
+        .result-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .result-measure {
+            background: #f8f9f9;
+            padding: 15px 5px;
+            border-radius: 10px;
+            border: 2px solid #bdc3c7;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        
+        .result-chord-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin: 5px 0 10px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #d5dbdb;
+            width: 80%;
+        }
+        
+        .keyboard-guide-title {
+            font-size: 11px;
+            color: #34495e;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        kbd {
+            background-color: #2c3e50;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 22px; 
+            font-weight: bold;
+            border-bottom: 4px solid #1a252f;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.4);
+            margin: 5px 0;
+            display: inline-block;
+        }
+        
+        .root-note-name {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 8px;
+        }
+
+        /* === 반응형 (Responsive) 설정 === */
+        
+        /* 화면이 중간 크기 이하일 때 (아이패드, 태블릿 등) - 4마디씩 2줄로 배치 */
+        @media (max-width: 850px) {
+            .board, .result-board {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        /* 화면이 아주 작을 때 (스마트폰) - 요소 크기를 줄여서 한 화면에 맞춤 */
+        @media (max-width: 500px) {
+            h1 { font-size: 22px; }
+            .description { font-size: 13px; }
+            .measure { height: 110px; border-width: 2px; }
+            .measure-num { font-size: 12px; margin-bottom: 5px; }
+            .fixed-chord { font-size: 22px; }
+            select { font-size: 13px; padding: 2px; width: 90%; }
+            .chord-notes { font-size: 11px; margin-top: 5px; }
+            
+            .result-container h2 { font-size: 18px; }
+            .result-measure { padding: 10px 2px; }
+            kbd { font-size: 18px; padding: 6px 10px; }
+            .result-chord-name { font-size: 16px; margin: 3px 0 8px 0; }
+            .root-note-name { font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎵 코드 길찾기 게임 🎵</h1>
+    
+    <div class="key-selector">
+        <label><input type="radio" name="key" value="C" checked onchange="changeKey()"> C Major (밝다)</label>
+        <label><input type="radio" name="key" value="Am" onchange="changeKey()"> A minor (어둡다)</label>
+    </div>
+
+    <p class="description">
+        원하는 분위기(조성)를 선택한 후 코드를 연결해 보세요. (연속으로 같은 코드는 쓸 수 없습니다.)<br>
+        <strong>8마디를 모두 완성하면, 밴드랩에서 쳐야 할 '키보드 자판(근음)'이 나타납니다!</strong>
+    </p>
+
+    <div class="board" id="board"></div>
+
+    <div class="btn-container">
+        <button class="play-btn" id="playBtn" onclick="playAll()">▶️ 완성된 곡 전체 듣기</button>
+        <button class="reset-btn" onclick="initApp()">처음부터 다시 짜기</button>
+    </div>
+
+    <div class="result-container" id="bandlab-result">
+        <h2>🎉 밴드랩 건반 입력 가이드 (근음 연주)</h2>
+        <p style="color: #7f8c8d; margin-bottom: 20px; font-size: 14px;">아래의 까만색 네모 안의 <kbd style="font-size: 14px; padding: 2px 6px;">알파벳</kbd>이 여러분이 컴퓨터 키보드에서 눌러야 할 진짜 버튼입니다!</p>
+        <div class="result-board" id="result-board"></div>
+    </div>
+
+    <script>
+        let audioCtx;
+        let currentKey = 'C'; 
+
+        const frequencies = {
+            'C': [261.63, 329.63, 392.00],
+            'Dm': [293.66, 349.23, 440.00],
+            'Em': [329.63, 392.00, 493.88],
+            'F': [349.23, 440.00, 523.25],
+            'G': [392.00, 493.88, 587.33],
+            'Am': [220.00, 261.63, 329.63],
+            'Bdim': [246.94, 293.66, 349.23], 
+            'E': [329.63, 415.30, 493.88],
+            'G#dim': [207.65, 246.94, 293.66] 
+        };
+
+        const chordNotes = {
+            'C': 'C - E - G',
+            'Dm': 'D - F - A',
+            'Em': 'E - G - B',
+            'F': 'F - A - C',
+            'G': 'G - B - D',
+            'Am': 'A - C - E',
+            'Bdim': 'B - D - F',
+            'E': 'E - G# - B',
+            'G#dim': 'G# - B - D'
+        };
+
+        const bandlabRootKeys = {
+            'C': { key: 'A', rootName: 'C (도)' },
+            'Dm': { key: 'S', rootName: 'D (레)' },
+            'Em': { key: 'D', rootName: 'E (미)' },
+            'F': { key: 'F', rootName: 'F (파)' },
+            'G': { key: 'G', rootName: 'G (솔)' },
+            'Am': { key: 'H', rootName: 'A (라)' },
+            'Bdim': { key: 'J', rootName: 'B (시)' },
+            'E': { key: 'D', rootName: 'E (미)' }, 
+            'G#dim': { key: 'Y', rootName: 'G# (솔#)' }
+        };
+
+        const keyData = {
+            'C': {
+                fixed: { 1: 'C', 5: 'C', 7: 'G', 8: 'C' },
+                rules: {
+                    'C': ['C', 'Dm', 'Em', 'F', 'G', 'Am', 'Bdim'],
+                    'Dm': ['F', 'G', 'Bdim'],
+                    'Em': ['Dm'],
+                    'F': ['Dm', 'G', 'Bdim'],
+                    'G': ['C', 'Am'],
+                    'Am': ['Dm', 'F', 'G', 'Bdim'],
+                    'Bdim': ['C', 'Em']
+                },
+                themeClass: 'major-key'
+            },
+            'Am': {
+                fixed: { 1: 'Am', 5: 'Am', 7: 'E', 8: 'Am' },
+                rules: {
+                    'Am': ['Am', 'Bdim', 'C', 'Dm', 'E', 'F', 'G#dim'],
+                    'Bdim': ['Dm', 'E'],
+                    'C': ['Bdim'],
+                    'Dm': ['Bdim', 'E', 'G#dim'],
+                    'E': ['Am', 'F'],
+                    'F': ['Bdim', 'Dm', 'E', 'G#dim'],
+                    'G#dim': ['Am', 'C']
+                },
+                themeClass: 'minor-key'
+            }
+        };
+
+        let measures = [];
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playChord(chordName, duration = 0.8) {
+            initAudio();
+            if (!frequencies[chordName] || chordName === '선택') return;
+            const freqs = frequencies[chordName];
+            freqs.forEach(freq => {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.type = 'triangle'; 
+                oscillator.frequency.value = freq;
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + duration);
+            });
+        }
+
+        function changeKey() {
+            const radios = document.getElementsByName('key');
+            for (let radio of radios) {
+                if (radio.checked) {
+                    currentKey = radio.value;
+                    break;
+                }
+            }
+            initApp();
+        }
+
+        function initApp() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            measures = [];
+            document.getElementById('bandlab-result').style.display = 'none'; 
+
+            const currentKeyData = keyData[currentKey];
+
+            for (let i = 1; i <= 8; i++) {
+                if (currentKeyData.fixed[i]) {
+                    measures.push({ id: i, type: 'fixed', value: currentKeyData.fixed[i] });
+                } else {
+                    measures.push({ id: i, type: 'select' });
+                }
+            }
+
+            measures.forEach((m, index) => {
+                const box = document.createElement('div');
+                box.className = `measure ${m.type === 'fixed' ? 'fixed-box ' + currentKeyData.themeClass : ''}`;
+                box.id = `measure-box-${m.id}`;
+                
+                const numLabel = document.createElement('div');
+                numLabel.className = 'measure-num';
+                numLabel.innerText = `${m.id}마디`;
+                box.appendChild(numLabel);
+
+                if (m.type === 'fixed') {
+                    const chordLabel = document.createElement('div');
+                    chordLabel.className = 'fixed-chord';
+                    chordLabel.innerText = m.value;
+                    box.appendChild(chordLabel);
+                    
+                    const notesLabel = document.createElement('div');
+                    notesLabel.className = 'chord-notes';
+                    notesLabel.innerText = chordNotes[m.value];
+                    box.appendChild(notesLabel);
+
+                    box.onclick = () => playChord(m.value);
+                } else {
+                    const selectObj = document.createElement('select');
+                    selectObj.id = `measure-${m.id}`;
+                    
+                    const notesLabel = document.createElement('div');
+                    notesLabel.className = 'chord-notes';
+                    notesLabel.id = `notes-${m.id}`;
+                    
+                    if (m.id === 2) {
+                        updateOptions(selectObj, currentKeyData.fixed[1], null);
+                    } else if (m.id === 6) {
+                        updateOptions(selectObj, currentKeyData.fixed[5], currentKeyData.fixed[7]);
+                    } else {
+                        selectObj.disabled = true;
+                        const defaultOpt = document.createElement('option');
+                        defaultOpt.text = '-';
+                        selectObj.appendChild(defaultOpt);
+                    }
+                    
+                    selectObj.addEventListener('change', function() {
+                        const chordVal = this.value;
+                        notesLabel.innerText = chordVal !== '선택' ? chordNotes[chordVal] : '';
+                        playChord(chordVal);
+
+                        const nextM = measures[index + 1];
+                        if (nextM && nextM.type === 'select') {
+                            const nextSelect = document.getElementById(`measure-${nextM.id}`);
+                            let nextFixedVal = null;
+                            const afterNextM = measures[index + 2];
+                            if (afterNextM && afterNextM.type === 'fixed') {
+                                nextFixedVal = afterNextM.value;
+                            }
+                            updateOptions(nextSelect, chordVal, nextFixedVal);
+                            resetSubsequent(index + 2);
+                        }
+                        checkCompletion(); 
+                    });
+                    
+                    box.appendChild(selectObj);
+                    box.appendChild(notesLabel);
+                }
+                board.appendChild(box);
+            });
+            
+            checkCompletion(); 
+        }
+
+        function updateOptions(selectElement, prevChord, nextFixedValue) {
+            selectElement.innerHTML = '';
+            selectElement.disabled = false;
+            const currentRules = keyData[currentKey].rules;
+
+            if (prevChord === '선택' || !currentRules[prevChord]) {
+                selectElement.disabled = true;
+                const defaultOpt = document.createElement('option');
+                defaultOpt.text = '-';
+                selectElement.appendChild(defaultOpt);
+                return;
+            }
+
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '선택';
+            defaultOpt.text = '-';
+            selectElement.appendChild(defaultOpt);
+
+            currentRules[prevChord].forEach(chord => {
+                if (chord === prevChord) return; 
+                if (nextFixedValue && chord === nextFixedValue) return;
+                const opt = document.createElement('option');
+                opt.value = chord;
+                opt.text = chord;
+                selectElement.appendChild(opt);
+            });
+        }
+
+        function resetSubsequent(startIndex) {
+            for (let i = startIndex; i < measures.length; i++) {
+                if (measures[i].type === 'fixed') break; 
+                if (measures[i].type === 'select') {
+                    const sel = document.getElementById(`measure-${measures[i].id}`);
+                    sel.innerHTML = '';
+                    const defaultOpt = document.createElement('option');
+                    defaultOpt.text = '-';
+                    sel.appendChild(defaultOpt);
+                    sel.disabled = true;
+                    
+                    const notes = document.getElementById(`notes-${measures[i].id}`);
+                    if (notes) notes.innerText = '';
+                }
+            }
+        }
+
+        function checkCompletion() {
+            let isComplete = true;
+            let currentSequence = [];
+            
+            for (let i = 0; i < measures.length; i++) {
+                if (measures[i].type === 'fixed') {
+                    currentSequence.push(measures[i].value);
+                } else {
+                    const sel = document.getElementById(`measure-${measures[i].id}`);
+                    if (!sel || sel.value === '-' || sel.value === '선택') {
+                        isComplete = false;
+                        break;
+                    }
+                    currentSequence.push(sel.value);
+                }
+            }
+
+            const resultContainer = document.getElementById('bandlab-result');
+            const resultBoard = document.getElementById('result-board');
+            
+            if (isComplete) {
+                resultBoard.innerHTML = ''; 
+                
+                currentSequence.forEach((chord, index) => {
+                    const data = bandlabRootKeys[chord];
+                    const box = document.createElement('div');
+                    box.className = 'result-measure';
+                    
+                    let htmlStr = `<div class="measure-num">${index + 1}마디</div>`;
+                    htmlStr += `<div class="keyboard-guide-title">완성된 코드</div>`;
+                    htmlStr += `<div class="result-chord-name">${chord}</div>`;
+                    htmlStr += `<div class="keyboard-guide-title">누를 키보드 자판</div>`;
+                    htmlStr += `<div><kbd>${data.key}</kbd></div>`;
+                    htmlStr += `<div class="root-note-name">근음: ${data.rootName}</div>`;
+                    
+                    box.innerHTML = htmlStr;
+                    resultBoard.appendChild(box);
+                });
+                
+                resultContainer.style.display = 'block'; 
+            } else {
+                resultContainer.style.display = 'none'; 
+            }
+        }
+
+        async function playAll() {
+            let sequence = [];
+            for (let i = 0; i < measures.length; i++) {
+                if (measures[i].type === 'fixed') {
+                    sequence.push(measures[i].value);
+                } else {
+                    const sel = document.getElementById(`measure-${measures[i].id}`);
+                    if (!sel || sel.value === '-' || sel.value === '선택') {
+                        alert(`${measures[i].id}마디 코드를 먼저 선택해주세요!`);
+                        return;
+                    }
+                    sequence.push(sel.value);
+                }
+            }
+
+            const playBtn = document.getElementById('playBtn');
+            playBtn.disabled = true;
+            playBtn.innerText = '재생 중...';
+
+            for(let i = 0; i < sequence.length; i++) {
+                document.querySelectorAll('.measure').forEach(b => b.classList.remove('playing'));
+                const currentBox = document.getElementById(`measure-box-${measures[i].id}`);
+                currentBox.classList.add('playing');
+                playChord(sequence[i], 1.0);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            document.querySelectorAll('.measure').forEach(b => b.classList.remove('playing'));
+            playBtn.disabled = false;
+            playBtn.innerText = '▶️ 완성된 곡 전체 듣기';
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
